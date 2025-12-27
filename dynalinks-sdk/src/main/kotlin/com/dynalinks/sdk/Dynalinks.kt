@@ -5,9 +5,12 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import com.dynalinks.sdk.internal.APIClient
+import com.dynalinks.sdk.internal.DynalinksStorage
 import com.dynalinks.sdk.internal.InstallReferrerManager
 import com.dynalinks.sdk.internal.Logger
+import com.dynalinks.sdk.internal.ReferrerUrlProvider
 import com.dynalinks.sdk.internal.Storage
+import com.dynalinks.sdk.internal.asReferrerUrlProvider
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -262,14 +265,26 @@ object Dynalinks {
  * Internal implementation of the Dynalinks SDK.
  */
 internal class DynalinksInstance(
-    context: Context,
-    clientAPIKey: String,
-    baseURL: String,
-    private val allowEmulator: Boolean
+    private val apiClient: APIClient,
+    private val storage: DynalinksStorage,
+    private val referrerUrlProvider: ReferrerUrlProvider,
+    private val allowEmulator: Boolean,
+    private val emulatorChecker: () -> Boolean = ::defaultEmulatorCheck
 ) {
-    private val apiClient = APIClient(baseURL, clientAPIKey)
-    private val storage = Storage(context)
-    private val installReferrerManager = InstallReferrerManager(context)
+    /**
+     * Production constructor.
+     */
+    constructor(
+        context: Context,
+        clientAPIKey: String,
+        baseURL: String,
+        allowEmulator: Boolean
+    ) : this(
+        apiClient = APIClient(baseURL, clientAPIKey),
+        storage = Storage(context),
+        referrerUrlProvider = InstallReferrerManager(context).asReferrerUrlProvider(),
+        allowEmulator = allowEmulator
+    )
 
     suspend fun checkForDeferredDeepLink(): DeepLinkResult {
         // Return cached result if already checked
@@ -284,15 +299,15 @@ internal class DynalinksInstance(
         }
 
         // Check if running on emulator
-        if (!allowEmulator && isEmulator()) {
+        if (!allowEmulator && emulatorChecker()) {
             Logger.info("Skipping deferred deep link check on emulator")
             storage.hasCheckedForDeferredDeepLink = true
             throw DynalinksError.Emulator
         }
 
-        // Get install referrer
-        val referrerResult = installReferrerManager.getReferrer()
-        if (referrerResult?.url == null) {
+        // Get install referrer URL
+        val referrerUrl = referrerUrlProvider.getReferrerUrl()
+        if (referrerUrl == null) {
             Logger.info("No Dynalinks referrer found")
             storage.hasCheckedForDeferredDeepLink = true
             return DeepLinkResult.notMatched(isDeferred = true)
@@ -300,7 +315,7 @@ internal class DynalinksInstance(
 
         // Attribute the URL to get link data
         val result = try {
-            apiClient.attributeLink(referrerResult.url, isDeferred = true)
+            apiClient.attributeLink(referrerUrl, isDeferred = true)
         } catch (e: Exception) {
             Logger.error("Failed to attribute link", e)
             storage.hasCheckedForDeferredDeepLink = true
@@ -341,15 +356,18 @@ internal class DynalinksInstance(
     fun reset() {
         storage.reset()
     }
+}
 
-    private fun isEmulator(): Boolean {
-        return (Build.FINGERPRINT.startsWith("generic")
-                || Build.FINGERPRINT.startsWith("unknown")
-                || Build.MODEL.contains("google_sdk")
-                || Build.MODEL.contains("Emulator")
-                || Build.MODEL.contains("Android SDK built for x86")
-                || Build.MANUFACTURER.contains("Genymotion")
-                || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
-                || "google_sdk" == Build.PRODUCT)
-    }
+/**
+ * Default emulator detection function.
+ */
+private fun defaultEmulatorCheck(): Boolean {
+    return (Build.FINGERPRINT.startsWith("generic")
+            || Build.FINGERPRINT.startsWith("unknown")
+            || Build.MODEL.contains("google_sdk")
+            || Build.MODEL.contains("Emulator")
+            || Build.MODEL.contains("Android SDK built for x86")
+            || Build.MANUFACTURER.contains("Genymotion")
+            || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
+            || "google_sdk" == Build.PRODUCT)
 }

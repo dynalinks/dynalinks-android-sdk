@@ -1,11 +1,12 @@
 package com.dynalinks.sdk.internal
 
+import android.util.Log
 import com.dynalinks.sdk.DynalinksLogLevel
-import timber.log.Timber
 
 /**
  * Internal logger for the Dynalinks SDK.
- * Uses Timber for logging with configurable log levels.
+ * Uses Android's built-in Log class to avoid forcing third-party
+ * logging libraries on host apps.
  */
 internal object Logger {
     private const val TAG = "Dynalinks"
@@ -13,39 +14,36 @@ internal object Logger {
     var logLevel: DynalinksLogLevel = DynalinksLogLevel.ERROR
 
     /**
-     * Initialize Timber with a DebugTree if not already planted.
-     * Should be called during SDK configuration.
+     * Initialize the logger. No-op for Android Log.
      */
     fun initialize() {
-        if (Timber.treeCount == 0) {
-            Timber.plant(Timber.DebugTree())
-        }
+        // No initialization needed for Android Log
     }
 
     fun debug(message: String) {
         if (logLevel >= DynalinksLogLevel.DEBUG) {
-            Timber.tag(TAG).d(message)
+            Log.d(TAG, message)
         }
     }
 
     fun info(message: String) {
         if (logLevel >= DynalinksLogLevel.INFO) {
-            Timber.tag(TAG).i(message)
+            Log.i(TAG, message)
         }
     }
 
     fun warning(message: String) {
         if (logLevel >= DynalinksLogLevel.WARNING) {
-            Timber.tag(TAG).w(message)
+            Log.w(TAG, message)
         }
     }
 
     fun error(message: String, throwable: Throwable? = null) {
         if (logLevel >= DynalinksLogLevel.ERROR) {
             if (throwable != null) {
-                Timber.tag(TAG).e(throwable, message)
+                Log.e(TAG, message, throwable)
             } else {
-                Timber.tag(TAG).e(message)
+                Log.e(TAG, message)
             }
         }
     }

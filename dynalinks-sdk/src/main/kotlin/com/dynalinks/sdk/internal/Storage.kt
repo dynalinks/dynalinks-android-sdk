@@ -9,7 +9,7 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 /**
  * Persistent storage for the Dynalinks SDK using SharedPreferences.
  */
-internal class Storage(context: Context) {
+internal class Storage(context: Context) : DynalinksStorage {
     private val prefs: SharedPreferences = context.getSharedPreferences(
         PREFS_NAME,
         Context.MODE_PRIVATE
@@ -24,14 +24,14 @@ internal class Storage(context: Context) {
     /**
      * Whether we have already checked for a deferred deep link.
      */
-    var hasCheckedForDeferredDeepLink: Boolean
+    override var hasCheckedForDeferredDeepLink: Boolean
         get() = prefs.getBoolean(KEY_HAS_CHECKED, false)
         set(value) = prefs.edit().putBoolean(KEY_HAS_CHECKED, value).apply()
 
     /**
      * Cached result from a previous deferred deep link check.
      */
-    var cachedResult: DeepLinkResult?
+    override var cachedResult: DeepLinkResult?
         get() {
             val json = prefs.getString(KEY_CACHED_RESULT, null) ?: return null
             return try {
@@ -53,7 +53,7 @@ internal class Storage(context: Context) {
     /**
      * Reset all stored state.
      */
-    fun reset() {
+    override fun reset() {
         prefs.edit().clear().apply()
         Logger.info("Storage reset")
     }
