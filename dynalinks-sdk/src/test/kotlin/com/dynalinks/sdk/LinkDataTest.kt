@@ -30,7 +30,11 @@ class LinkDataTest {
                 "social_title": "Check out this product",
                 "social_description": "Amazing product description",
                 "social_image_url": "https://example.com/image.jpg",
-                "clicks": 42
+                "clicks": 42,
+                "ios_deferred_deep_linking_enabled": true,
+                "referrer": "utm_source=facebook&utm_campaign=summer",
+                "provider_token": "12345678",
+                "campaign_token": "summer_sale"
             }
         """.trimIndent()
 
@@ -50,6 +54,10 @@ class LinkDataTest {
         assertEquals("Amazing product description", linkData.socialDescription)
         assertEquals("https://example.com/image.jpg", linkData.socialImageUrl)
         assertEquals(42, linkData.clicks)
+        assertEquals(true, linkData.iosDeferredDeepLinkingEnabled)
+        assertEquals("utm_source=facebook&utm_campaign=summer", linkData.referrer)
+        assertEquals("12345678", linkData.providerToken)
+        assertEquals("summer_sale", linkData.campaignToken)
     }
 
     @Test

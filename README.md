@@ -231,6 +231,10 @@ Data about the matched link.
 | `path` | `String?` | Link path |
 | `deepLinkValue` | `String?` | Value for in-app routing |
 | `fullUrl` | `String?` | Complete Dynalinks URL |
+| `iosDeferredDeepLinkingEnabled` | `Boolean?` | Whether iOS deferred deep linking is enabled |
+| `referrer` | `String?` | Referrer tracking parameter for attribution |
+| `providerToken` | `String?` | Apple Search Ads attribution token (pt) |
+| `campaignToken` | `String?` | Campaign identifier for attribution (ct) |
 | `socialTitle` | `String?` | Social sharing title |
 | `socialDescription` | `String?` | Social sharing description |
 | `socialImageUrl` | `String?` | Social sharing image URL |
@@ -332,6 +336,40 @@ To test deferred deep linking multiple times:
 
 ```kotlin
 Dynalinks.reset() // Clears cached state
+```
+
+## Attribution Tracking
+
+The SDK provides attribution data for campaign tracking and analytics:
+
+```kotlin
+lifecycleScope.launch {
+    val result = Dynalinks.checkForDeferredDeepLink()
+    if (result.matched) {
+        result.link?.let { link ->
+            // Track attribution data for analytics
+            link.referrer?.let { referrer ->
+                Log.d("Dynalinks", "Referrer: $referrer") // e.g., "utm_source=facebook&utm_campaign=summer"
+            }
+
+            link.providerToken?.let { token ->
+                Log.d("Dynalinks", "Apple Search Ads token: $token") // pt parameter
+            }
+
+            link.campaignToken?.let { campaign ->
+                Log.d("Dynalinks", "Campaign: $campaign") // ct parameter
+            }
+
+            // Send to your analytics platform
+            analytics.track("deep_link_opened", mapOf(
+                "referrer" to link.referrer,
+                "provider_token" to link.providerToken,
+                "campaign" to link.campaignToken,
+                "deep_link" to link.deepLinkValue
+            ))
+        }
+    }
+}
 ```
 
 ## License

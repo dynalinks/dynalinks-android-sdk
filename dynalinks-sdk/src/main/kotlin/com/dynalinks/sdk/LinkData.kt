@@ -57,5 +57,20 @@ data class LinkData(
     val socialImageUrl: String? = null,
 
     /** Number of clicks */
-    val clicks: Int? = null
+    val clicks: Int? = null,
+
+    /** Whether iOS deferred deep linking is enabled */
+    @Json(name = "ios_deferred_deep_linking_enabled")
+    val iosDeferredDeepLinkingEnabled: Boolean? = null,
+
+    /** Referrer tracking parameter (e.g., "utm_source=facebook") */
+    val referrer: String? = null,
+
+    /** Apple Search Ads attribution token (pt parameter) */
+    @Json(name = "provider_token")
+    val providerToken: String? = null,
+
+    /** Campaign identifier for attribution (ct parameter) */
+    @Json(name = "campaign_token")
+    val campaignToken: String? = null
 )
