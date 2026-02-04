@@ -97,16 +97,65 @@ internal class APIClient(
         }
 
         return if (attributeResponse.matched && attributeResponse.link != null) {
+            // For unnamed links (deepLinkValue is null), parse query params from the URL
+            val enrichedLink = if (attributeResponse.link.deepLinkValue == null) {
+                enrichLinkDataFromQueryParams(url, attributeResponse.link)
+            } else {
+                attributeResponse.link
+            }
+
             DeepLinkResult(
                 matched = true,
                 confidence = attributeResponse.confidence,
                 matchScore = attributeResponse.matchScore,
-                link = attributeResponse.link,
+                link = enrichedLink,
                 isDeferred = isDeferred
             )
         } else {
             DeepLinkResult.notMatched(isDeferred)
         }
+    }
+
+    /**
+     * Enrich LinkData with query parameters for unnamed links.
+     * Parses query params from the Dynalinks URL and maps them to LinkData fields.
+     */
+    private fun enrichLinkDataFromQueryParams(url: String, linkData: LinkData): LinkData {
+        val uri = try {
+            java.net.URI(url)
+        } catch (e: Exception) {
+            Logger.debug("Failed to parse URL for query params: ${e.message}")
+            return linkData
+        }
+
+        val query = uri.query ?: return linkData
+
+        // Parse query string into a map
+        val queryParams = query.split("&")
+            .mapNotNull { param ->
+                val parts = param.split("=", limit = 2)
+                if (parts.size == 2) {
+                    parts[0] to java.net.URLDecoder.decode(parts[1], "UTF-8")
+                } else null
+            }
+            .toMap()
+
+        if (queryParams.isEmpty()) return linkData
+
+        Logger.debug("Enriching unnamed link with query params: $queryParams")
+
+        return linkData.copy(
+            url = queryParams["link"] ?: linkData.url,
+            socialTitle = queryParams["st"] ?: linkData.socialTitle,
+            socialDescription = queryParams["sd"] ?: linkData.socialDescription,
+            socialImageUrl = queryParams["si"] ?: linkData.socialImageUrl,
+            enableForcedRedirect = queryParams["efr"]?.toBooleanStrictOrNull() ?: linkData.enableForcedRedirect,
+            androidFallbackUrl = queryParams["afl"] ?: linkData.androidFallbackUrl,
+            iosFallbackUrl = queryParams["ifl"] ?: linkData.iosFallbackUrl,
+            referrer = queryParams["referrer"] ?: linkData.referrer,
+            iosDeferredDeepLinkingEnabled = queryParams["ide"]?.toBooleanStrictOrNull()
+                ?: linkData.iosDeferredDeepLinkingEnabled
+        )
     }
 
     /**

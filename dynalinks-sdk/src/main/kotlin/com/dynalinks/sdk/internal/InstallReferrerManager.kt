@@ -1,6 +1,7 @@
 package com.dynalinks.sdk.internal
 
 import android.content.Context
+import android.util.Base64
 import com.android.installreferrer.api.InstallReferrerClient
 import com.android.installreferrer.api.InstallReferrerStateListener
 import com.android.installreferrer.api.ReferrerDetails
@@ -112,27 +113,44 @@ internal class InstallReferrerManager(private val context: Context) {
     /**
      * Parse the referrer string to extract the URL.
      *
-     * The referrer format is: url=https://project.example.com/path&utm_source=...
-     * We look for a 'url' parameter and return it if it's a valid HTTP(S) URL.
+     * Tries _url parameter first (base64-encoded, new format), then falls back to
+     * url parameter (URL-encoded, legacy format) for backward compatibility.
      */
     private fun parseReferrer(referrer: String?): String? {
         if (referrer.isNullOrBlank()) return null
 
         return try {
-            referrer.split("&")
+            val params = referrer.split("&")
                 .asSequence()
                 .map { it.split("=", limit = 2) }
                 .filter { it.size == 2 }
-                .firstOrNull { (key, _) -> key == "url" }
+                .toList()
+
+            // Try _url parameter first (base64-encoded, new format)
+            params.firstOrNull { (key, _) -> key == "_url" }
                 ?.let { (_, value) ->
-                    val decoded = URLDecoder.decode(value, "UTF-8")
-                    // Validate it's a valid HTTP(S) URL
-                    if (decoded.startsWith("https://") || decoded.startsWith("http://")) {
-                        decoded
-                    } else {
-                        null
+                    try {
+                        val decoded = String(Base64.decode(value, Base64.URL_SAFE or Base64.NO_PADDING))
+                        if (decoded.startsWith("https://") || decoded.startsWith("http://")) {
+                            Logger.debug("Found URL in _url parameter (base64): $decoded")
+                            return decoded
+                        }
+                    } catch (e: Exception) {
+                        Logger.debug("Failed to decode _url parameter: ${e.message}")
                     }
                 }
+
+            // Fall back to url parameter (URL-encoded, legacy format)
+            params.firstOrNull { (key, _) -> key == "url" }
+                ?.let { (_, value) ->
+                    val decoded = URLDecoder.decode(value, "UTF-8")
+                    if (decoded.startsWith("https://") || decoded.startsWith("http://")) {
+                        Logger.debug("Found URL in url parameter: $decoded")
+                        return decoded
+                    }
+                }
+
+            null
         } catch (e: Exception) {
             Logger.error("Error parsing referrer: ${e.message}")
             null
