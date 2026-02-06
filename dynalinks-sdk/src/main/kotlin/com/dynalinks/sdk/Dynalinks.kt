@@ -75,7 +75,7 @@ import kotlinx.coroutines.launch
 object Dynalinks {
 
     /** The current version of the Dynalinks SDK */
-    const val VERSION = "1.0.1"
+    const val VERSION = "1.0.2"
 
     private var instance: DynalinksInstance? = null
     private val lock = Any()
