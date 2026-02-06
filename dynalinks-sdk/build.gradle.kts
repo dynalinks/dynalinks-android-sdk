@@ -57,8 +57,8 @@ dependencies {
 publishing {
     publications {
         register<MavenPublication>("release") {
-            groupId = "com.dynalinks"
-            artifactId = "dynalinks-sdk"
+            groupId = "com.github.dynalinks"
+            artifactId = "dynalinks-android-sdk"
             version = "1.0.2"
 
             afterEvaluate {
