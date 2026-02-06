@@ -35,7 +35,7 @@ Add the dependency to your app's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.github.dynalinks:dynalinks-android-sdk:1.0.0")
+    implementation("com.github.dynalinks:dynalinks-android-sdk:1.0.3")
 }
 ```
 
